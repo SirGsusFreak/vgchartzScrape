@@ -5,9 +5,31 @@ import urllib.request
 import pandas as pd
 import numpy as np
 import logging
-import sys
 import time
 import json
+
+genres_list = [
+       "Music",
+       "Party",
+       "Platform",
+       "Puzzle",
+       "Racing",
+       "Role-Playing",
+       "Sandbox",
+       "Shooter",
+       "Simulation",
+       "Sports",
+       "Strategy",
+       "Visual+Novel",
+        "Action",
+        "Action-Adventure",
+        "Adventure",
+        "Board+Game",
+        "Education",
+        "Fighting",
+        "Misc",
+        "MMO"
+]
 
 def create_random_header():
     """
@@ -34,13 +56,11 @@ def generate_remaining_url(*, query_parameters):
     Generate an url with a list of videogames from the query params configured at resources.json
     :return: Url with page number
     """
-    logging.info("generate_remaining_url >>>")
     reply=''
     for param in query_parameters:
         value=query_parameters.get(param, None)
         reply += f"&{param}={value}" if value is not None else f"&{param}="
     logging.debug(f"Url Generated: {base_url}N{reply}")
-    logging.info("generate_remaining_url <<<")
     return reply
 
 def get_page(*, url):
@@ -164,6 +184,11 @@ def download_data(*, start_page, end_page, include_genre):
         soup = BeautifulSoup(current_page, features="html.parser")
         logging.info("Downloaded page {}".format(page))
 
+        # get the first page, and find number of result for the specific Genre.
+        th_tags = soup.find("th")
+        record_count = int(th_tags.contents[0][(len('Results: (')):][:-1].replace(',', ''))
+        logging.info("Number of games found: {}".format(record_count))
+
         # We locate the game through search <a> tags with game urls in the main table
         a_tags = soup.find_all("a")
         game_tags = list(filter(lambda x: x.attrs['href'].startswith('https://www.vgchartz.com/game/'), a_tags[10:]))
@@ -217,6 +242,7 @@ def download_data(*, start_page, end_page, include_genre):
             downloaded_games += 1
 
     logging.info("Number of downloaded resources: {}".format(downloaded_games))
+    return record_count
 
 def save_games_data(*, filename, separator, enc):
     """
@@ -277,12 +303,13 @@ if __name__ == "__main__":
 
     logging.info('Application started')
     base_url = properties['base_page_url']
-    remaining_url=generate_remaining_url(query_parameters=properties['query_parameters'])
+    params_dict = properties['query_parameters']
 
-    start_page_no = properties['start_page']
-    block_size = 50
+    for cur_genre in genres_list:
+        params_dict['genre'] = cur_genre
+        remaining_url = generate_remaining_url(query_parameters=params_dict)
+        start_page_no = 1
 
-    while start_page_no <= (properties['end_page']):
         # Buffers
         rank = []
         game_name = []
@@ -293,16 +320,23 @@ if __name__ == "__main__":
         total_shipped = []
         total_sales, sales_na, sales_pal, sales_jp, sales_ot = [], [], [], [], []
         release_date, last_update = [], []
-        end_page_no = start_page_no + block_size - 1
+        end_page_no = 1
 
-        download_data(
+        # download the first page and get the number of records from it.
+        record_count = download_data(
             start_page=start_page_no,
-            end_page=end_page_no,
+            end_page=start_page_no,
             include_genre=properties['include_genre'])
 
+        start_page_no += 1
+        while len(rank) < record_count:
+            download_data(
+                start_page=start_page_no,
+                end_page=start_page_no,
+                include_genre=properties['include_genre'])
+            start_page_no += 1
+
         save_games_data(
-            filename='dataset/vgsales' + str(start_page_no) + '_' + str(end_page_no) + '.csv',
+            filename='dataset/vgsales_' + cur_genre + '.csv',
             separator=properties['separator'],
             enc=properties['encoding'])
-
-        start_page_no += block_size
