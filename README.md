@@ -50,10 +50,11 @@ The dataset it's composed by this fields, and the data is collected with this [m
 
 ## TODO
 
-- [ ] Remap the columns according the selected values at resources.json
-- [ ] Add some unit testing
-- [ ] Dockerize (w/ alpine-python) to ease use and avoid intallations
-- [ ] Publish at Docker hub
+- [ ] Add the Genre Column
+- [ ] Merge the outputs
+- [ ] publish output to web site. 
+- [ ] merge the total column
+- [ ] Add some unit testing, based on Github testing, to create a daily built of the site. 
 
 ## Links
 
