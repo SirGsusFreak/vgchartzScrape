@@ -8,7 +8,7 @@
   "include_genre": false,
   "base_page_url": "https://www.vgchartz.com/gamedb/?page=",
   "query_parameters": {
-    "results": 200,
+    "results": 2000,
     "region": "All",
     "boxart": "Both",
     "banner": "Both",
