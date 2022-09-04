@@ -14,7 +14,6 @@ def create_random_header():
     Create a random user agent in order to better mimic user behaviour.
     :return JSON with User-Agent as key and random browser-os combo as value
     """
-    logging.info("create_random_header >>>")
     browsers = ["Mozilla", "Chrome"]
     os_list = ["Windows NT 6.1; Win64; x64", "X11; Linux x86_64"]
     major_version = randint(properties['minimum_major_version'], properties['maximum_major_version'])
@@ -28,8 +27,6 @@ def create_random_header():
         minor_version,
         chosen_os)
     header = {'User-Agent': user_agent}
-    logging.debug("Current user_agent: {}".format(header))
-    logging.info("create_random_header <<<")
     return header
 
 def generate_remaining_url(*, query_parameters):
@@ -54,15 +51,12 @@ def get_page(*, url):
     :param url: webpage URL
     :return: HTML page's body
     """
-    logging.info("get_page >>>")
     logging.debug("Current URL: {}".format(url))
     header = create_random_header()
     request = urllib.request.Request(url, headers=header)
     result = urllib.request.urlopen(request).read()
     time.sleep(randint(properties['minimum_sleep_time'], properties['maximum_sleep_time']))
-    logging.info("get_page <<<")
     return result
-
 
 def get_genre(*, game_url):
     """
@@ -71,8 +65,6 @@ def get_genre(*, game_url):
     :param game_url:
     :return: Genre of the input game
     """
-    logging.info("get_genre >>>")
-    logging.debug("Page to download: {}".format(game_url))
     site_raw = get_page(url=game_url)
     sub_soup = BeautifulSoup(site_raw, "html.parser")
 
@@ -88,8 +80,6 @@ def get_genre(*, game_url):
             temp_tag = h2
 
     genre_value = temp_tag.next_sibling.string
-    logging.debug("Game genre: {}".format(genre_value))
-    logging.info("get_genre <<<")
     return genre_value
 
 def parse_number(*, number_string):
@@ -98,15 +88,12 @@ def parse_number(*, number_string):
     :param number_string:
     :return: a float number right parsed
     """
-    logging.info("parse_number >>>")
-    print(number_string)
     if "m" in number_string:
         reply = number_string.strip('m')
         reply = str(float(reply) * 1000000)
     else:
         reply=number_string
 
-    logging.info("parse_number <<<")
     return float(reply) if not reply.startswith("N/A") else np.nan
 
 def parse_date(*, date_string):
@@ -115,15 +102,12 @@ def parse_date(*, date_string):
     :param date_string:
     :return: A timestamp in panda date format
     """
-    logging.info("parse_date >>>")
     if date_string.startswith('N/A'):
         date_formatted = 'N/A'
     else:
         #i.e. date_string = '18th Feb 20'
         date_formatted = pd.to_datetime(date_string)
 
-    logging.debug("Date parsed: {}".format(date_formatted))
-    logging.info("parse_date <<<")
     return date_formatted
 
 def add_current_game_data(*,
@@ -147,7 +131,6 @@ def add_current_game_data(*,
     """
     Add all the game data to the related lists
     """
-    logging.info("add_current_game_data >>>")
     game_name.append(current_game_name)
     rank.append(current_rank)
     platform.append(current_platform)
@@ -165,8 +148,6 @@ def add_current_game_data(*,
     sales_ot.append(current_sales_ot)
     release_date.append(current_release_date)
     last_update.append(current_last_update)
-    logging.info("add_current_game_data <<<")
-
 
 def download_data(*, start_page, end_page, include_genre):
     """
@@ -176,7 +157,6 @@ def download_data(*, start_page, end_page, include_genre):
     :param include_genre:
     :return:
     """
-    logging.info("download_data >>>")
     downloaded_games = 0  # Results are decreasingly ordered according to Shipped units
     for page in range(start_page, end_page + 1):
         page_url = "{}{}{}".format(base_url, str(page), remaining_url)
@@ -185,19 +165,12 @@ def download_data(*, start_page, end_page, include_genre):
         logging.info("Downloaded page {}".format(page))
 
         # We locate the game through search <a> tags with game urls in the main table
-        game_tags = list(filter(
-            lambda x: x.attrs['href'].startswith('https://www.vgchartz.com/game/'),
-            # discard the first 10 elements because those
-            # links are in the navigation bar
-            soup.find_all("a")
-        ))[10:]
+        a_tags = soup.find_all("a")
+        game_tags = list(filter(lambda x: x.attrs['href'].startswith('https://www.vgchartz.com/game/'), a_tags[10:]))
 
         for tag in game_tags:
-
             current_game_name = " ".join(tag.string.split())
             data = tag.parent.parent.find_all("td")
-
-            logging.debug("Downloaded game: {}. Name: {}".format(downloaded_games + 1, current_game_name))
 
             # Get the resto of attributes traverse up the DOM tree looking for the cells in results' table
             current_rank = np.int32(data[0].string)
@@ -244,8 +217,6 @@ def download_data(*, start_page, end_page, include_genre):
             downloaded_games += 1
 
     logging.info("Number of downloaded resources: {}".format(downloaded_games))
-    logging.info("download_data <<<")
-
 
 def save_games_data(*, filename, separator, enc):
     """
@@ -254,7 +225,6 @@ def save_games_data(*, filename, separator, enc):
     :param separator
     :param enc
     """
-    logging.info("save_games_data >>>")
     columns = {
         'Rank': rank,
         'Name': game_name,
@@ -276,27 +246,14 @@ def save_games_data(*, filename, separator, enc):
     }
 
     df = pd.DataFrame(columns)
-    logging.debug("Dataframe column name: {}".format(df.columns))
     df = df[[ 'Rank', 'Name', 'Genre', 'Platform', 'Publisher', 'Developer',
               'Vgchartz_Score', 'Critic_Score', 'User_Score', 'Total_Shipped',
               'Total_Sales', 'NA_Sales', 'PAL_Sales', 'JP_Sales', 'Other_Sales',
               'Release_Date', 'Last_Update' ]]
 
     df.to_csv(filename, sep=separator, encoding=enc, index=False)
-    logging.info("save_games_data <<<")
 
 if __name__ == "__main__":
-
-    # Buffers
-    rank = []
-    game_name = []
-    genre = []
-    platform = []
-    publisher, developer = [], []
-    critic_score, user_score, vgchartz_score = [], [], []
-    total_shipped = []
-    total_sales, sales_na, sales_pal, sales_jp, sales_ot = [], [], [], [], []
-    release_date, last_update = [], []
 
     properties = None
 
@@ -318,22 +275,34 @@ if __name__ == "__main__":
     console.setFormatter(formatter)
     logging.getLogger("").addHandler(console)
 
-    try:
-        logging.info('Application started')
-        base_url = properties['base_page_url']
-        remaining_url=generate_remaining_url(query_parameters=properties['query_parameters'])
+    logging.info('Application started')
+    base_url = properties['base_page_url']
+    remaining_url=generate_remaining_url(query_parameters=properties['query_parameters'])
+
+    start_page_no = properties['start_page']
+    block_size = 50
+
+    while start_page_no <= (properties['end_page']):
+        # Buffers
+        rank = []
+        game_name = []
+        genre = []
+        platform = []
+        publisher, developer = [], []
+        critic_score, user_score, vgchartz_score = [], [], []
+        total_shipped = []
+        total_sales, sales_na, sales_pal, sales_jp, sales_ot = [], [], [], [], []
+        release_date, last_update = [], []
+        end_page_no = start_page_no + block_size - 1
 
         download_data(
-            start_page=properties['start_page'],
-            end_page=properties['end_page'],
+            start_page=start_page_no,
+            end_page=end_page_no,
             include_genre=properties['include_genre'])
 
         save_games_data(
-            filename=properties['output_filename'],
+            filename='dataset/vgsales' + str(start_page_no) + '_' + str(end_page_no) + '.csv',
             separator=properties['separator'],
             enc=properties['encoding'])
 
-    except:
-        print("Global exception")
-        print("Unexpected error:", sys.exc_info())
-        pass
+        start_page_no += block_size

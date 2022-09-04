@@ -4,11 +4,11 @@
   "separator": ",",
   "encoding": "utf-8",
   "start_page": 1,
-  "end_page": 2,
+  "end_page": 310,
   "include_genre": false,
   "base_page_url": "https://www.vgchartz.com/gamedb/?page=",
   "query_parameters": {
-    "results": 100,
+    "results": 200,
     "region": "All",
     "boxart": "Both",
     "banner": "Both",
