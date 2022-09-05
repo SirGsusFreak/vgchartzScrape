@@ -131,6 +131,7 @@ def parse_date(*, date_string):
     return date_formatted
 
 def add_current_game_data(*,
+                          current_id,
                           current_rank,
                           current_game_name,
                           current_game_genre,
@@ -152,6 +153,7 @@ def add_current_game_data(*,
     Add all the game data to the related lists
     """
     game_name.append(current_game_name)
+    id.append(current_id)
     rank.append(current_rank)
     platform.append(current_platform)
     genre.append(current_game_genre)
@@ -217,10 +219,12 @@ def download_data(*, start_page, end_page, include_genre):
             # The genre requires another HTTP Request, so it's made at the end
             game_url = tag.attrs['href']
             current_game_genre = ""
+            current_id = int(game_url[(len('https://www.vgchartz.com/game/')):].split('/')[0])
             if include_genre:
                 current_game_genre = get_genre(game_url=game_url)
 
             add_current_game_data(
+                current_id = current_id,
                 current_rank=current_rank,
                 current_game_name=current_game_name,
                 current_game_genre=current_game_genre,
@@ -252,7 +256,7 @@ def save_games_data(*, filename, separator, enc):
     :param enc
     """
     columns = {
-        'Rank': rank,
+        'Id': id,
         'Name': game_name,
         'Genre': genre,
         'Platform': platform,
@@ -272,7 +276,7 @@ def save_games_data(*, filename, separator, enc):
     }
 
     df = pd.DataFrame(columns)
-    df = df[[ 'Rank', 'Name', 'Genre', 'Platform', 'Publisher', 'Developer',
+    df = df[[ 'Id', 'Name', 'Genre', 'Platform', 'Publisher', 'Developer',
               'Vgchartz_Score', 'Critic_Score', 'User_Score', 'Total_Shipped',
               'Total_Sales', 'NA_Sales', 'PAL_Sales', 'JP_Sales', 'Other_Sales',
               'Release_Date', 'Last_Update' ]]
@@ -312,6 +316,7 @@ if __name__ == "__main__":
 
         # Buffers
         rank = []
+        id = []
         game_name = []
         genre = []
         platform = []

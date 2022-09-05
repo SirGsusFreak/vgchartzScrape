@@ -51,7 +51,8 @@ The dataset it's composed by this fields, and the data is collected with this [m
 ## TODO
 
 - [x] Fetch Each Genre Separately
-- [ ] Replace the Rank Column with the Unique Id of vgsales site. 
+- [ ] Scrap the Genere names from the page, instead of specify them hardcode on an arrary. 
+- [x] Replace the Rank Column with the Unique Id of vgsales site. 
 - [ ] Data Cleanse:
   - [ ] Merge all files, and add Genre column
   - [ ] Merge the Total_Shipped and Total_Sales columns as it seems they completes 
