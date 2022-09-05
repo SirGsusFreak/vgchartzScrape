@@ -1,7 +1,7 @@
 # vgchartzfull - A crawler to download data from Global Videogame Sales
 
 vgchartzfull.py is a python@3 crawler script based on BeautifulSoup.
-It creates a csv dataset with data from more than 61,000 games. based on data from [VGChartz Site](http://www.vgchartz.com/gamedb/).  
+It creates a csv dataset with data from 61,181 games. based on data from [VGChartz Site](http://www.vgchartz.com/gamedb/).  
 
 ## Output
 
@@ -51,10 +51,11 @@ The dataset it's composed by this fields, and the data is collected with this [m
 ## TODO
 
 - [x] Fetch Each Genre Separately
-- [ ] Scrap the Genere names from the page, instead of specify them hardcode on an arrary. 
-- [x] Replace the Rank Column with the Unique Id of vgsales site. 
+- [x] Scrap the Genere names from the page, instead of specify them hardcode on an arrary. 
+- [x] Replace the Rank Column with the Unique Id of vgsales site.
+- [x] Add Genre Column 
 - [ ] Data Cleanse:
-  - [ ] Merge all files, and add Genre column
+  - [ ] Merge all files
   - [ ] Merge the Total_Shipped and Total_Sales columns as it seems they completes 
 - [ ] Add Juppter notebook for Pivots, and statistics, and Trends. 
 - [ ] publish output to Github web site. 

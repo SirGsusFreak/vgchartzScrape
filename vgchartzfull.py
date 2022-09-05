@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup, element
-from random import randint, choice
+from random import randint, choice, shuffle
 import urllib
 import urllib.request
 import pandas as pd
@@ -7,29 +7,6 @@ import numpy as np
 import logging
 import time
 import json
-
-genres_list = [
-       "Music",
-       "Party",
-       "Platform",
-       "Puzzle",
-       "Racing",
-       "Role-Playing",
-       "Sandbox",
-       "Shooter",
-       "Simulation",
-       "Sports",
-       "Strategy",
-       "Visual+Novel",
-        "Action",
-        "Action-Adventure",
-        "Adventure",
-        "Board+Game",
-        "Education",
-        "Fighting",
-        "Misc",
-        "MMO"
-]
 
 def create_random_header():
     """
@@ -78,30 +55,6 @@ def get_page(*, url):
     time.sleep(randint(properties['minimum_sleep_time'], properties['maximum_sleep_time']))
     return result
 
-def get_genre(*, game_url):
-    """
-    Return the game genre retrieved from the given url
-    (It involves another http request)
-    :param game_url:
-    :return: Genre of the input game
-    """
-    site_raw = get_page(url=game_url)
-    sub_soup = BeautifulSoup(site_raw, "html.parser")
-
-    # Eventually the info box is inconsistent among games so we
-    # have to find all the h2 and traverse from that to the genre name
-    # and make a temporary tag here to search
-    # for the one that contains the word "Genre"
-    h2s = sub_soup.find("div", {"id": "gameGenInfoBox"}).find_all('h2')
-    temp_tag = element.Tag
-
-    for h2 in h2s:
-        if h2.string == 'Genre':
-            temp_tag = h2
-
-    genre_value = temp_tag.next_sibling.string
-    return genre_value
-
 def parse_number(*, number_string):
     """
     Return string parsed to float with custom format for millions (m)
@@ -132,7 +85,6 @@ def parse_date(*, date_string):
 
 def add_current_game_data(*,
                           current_id,
-                          current_rank,
                           current_game_name,
                           current_game_genre,
                           current_platform,
@@ -154,7 +106,6 @@ def add_current_game_data(*,
     """
     game_name.append(current_game_name)
     id.append(current_id)
-    rank.append(current_rank)
     platform.append(current_platform)
     genre.append(current_game_genre)
     publisher.append(current_publisher.strip())
@@ -171,12 +122,12 @@ def add_current_game_data(*,
     release_date.append(current_release_date)
     last_update.append(current_last_update)
 
-def download_data(*, start_page, end_page, include_genre):
+def download_data(*, start_page, end_page, genre):
     """
     Download games data from vgchartz: only data whose pages are in the range (start_page, end_page) will be downloaded
     :param start_page:
     :param end_page:
-    :param include_genre:
+    :param genre:
     :return:
     """
     downloaded_games = 0  # Results are decreasingly ordered according to Shipped units
@@ -200,7 +151,6 @@ def download_data(*, start_page, end_page, include_genre):
             data = tag.parent.parent.find_all("td")
 
             # Get the resto of attributes traverse up the DOM tree looking for the cells in results' table
-            current_rank = np.int32(data[0].string)
             current_platform = data[3].find('img').attrs['alt']
             current_publisher = data[4].string
             current_developer = data[5].string
@@ -215,17 +165,14 @@ def download_data(*, start_page, end_page, include_genre):
             current_sales_ot = parse_number(number_string=data[14].string)
             current_release_date = parse_date(date_string=data[15].string)
             current_last_update = parse_date(date_string=data[16].string)
-
-            # The genre requires another HTTP Request, so it's made at the end
             game_url = tag.attrs['href']
-            current_game_genre = ""
             current_id = int(game_url[(len('https://www.vgchartz.com/game/')):].split('/')[0])
-            if include_genre:
-                current_game_genre = get_genre(game_url=game_url)
+
+            # game genre is fetched from the query
+            current_game_genre = genre
 
             add_current_game_data(
                 current_id = current_id,
-                current_rank=current_rank,
                 current_game_name=current_game_name,
                 current_game_genre=current_game_genre,
                 current_platform=current_platform,
@@ -300,8 +247,7 @@ if __name__ == "__main__":
     console.setLevel(logging.DEBUG)
 
     # set a format which is simpler for console use
-    formatter = logging.Formatter(fmt='%(asctime)s|%(name)s|%(levelname)s| %(message)s',
-                                  datefmt="%d-%m-%Y %H:%M:%S")
+    formatter = logging.Formatter(fmt='%(asctime)s|%(name)s|%(levelname)s| %(message)s', datefmt="%d-%m-%Y %H:%M:%S")
     console.setFormatter(formatter)
     logging.getLogger("").addHandler(console)
 
@@ -309,13 +255,47 @@ if __name__ == "__main__":
     base_url = properties['base_page_url']
     params_dict = properties['query_parameters']
 
+    # Buffers
+    id = []
+    game_name = []
+    genre = []
+    platform = []
+    publisher, developer = [], []
+    critic_score, user_score, vgchartz_score = [], [], []
+    total_shipped = []
+    total_sales, sales_na, sales_pal, sales_jp, sales_ot = [], [], [], [], []
+    release_date, last_update = [], []
+
+    # download the first page and get the number of records from it.
+    params_dict = properties['query_parameters']
+    required_results = params_dict['results']
+    params_dict['results'] = '1'
+    remaining_url = generate_remaining_url(query_parameters=params_dict)
+    page_url = "{}{}{}".format(base_url, str(1), remaining_url)
+    logging.info("Downloading First Page for it's meta data")
+    current_page = get_page(url=page_url)
+
+    soup = BeautifulSoup(current_page, features="html.parser")
+
+    select_tags = soup.find_all("select")
+    generes_tag = list(filter(lambda x: x.attrs['name'] == 'genre', select_tags))[0]
+    genres_list = [x.attrs['value'].replace(' ', '+') for x in generes_tag.findChildren('option') if x.attrs['value'] != '']
+    logging.info("Geners Found: {}".format(genres_list))
+
+    # get the first page, and find number of result for the specific Genre.
+    th_tags = soup.find("th")
+    record_count = int(th_tags.contents[0][(len('Results: (')):][:-1].replace(',', ''))
+    logging.info("Number of games found: {}".format(record_count))
+
+    params_dict['results'] = required_results
+    shuffle(genres_list)
+    total_record_count = 0
     for cur_genre in genres_list:
         params_dict['genre'] = cur_genre
         remaining_url = generate_remaining_url(query_parameters=params_dict)
         start_page_no = 1
 
-        # Buffers
-        rank = []
+        # Reset Buffers
         id = []
         game_name = []
         genre = []
@@ -331,17 +311,22 @@ if __name__ == "__main__":
         record_count = download_data(
             start_page=start_page_no,
             end_page=start_page_no,
-            include_genre=properties['include_genre'])
+            genre=cur_genre)
+
+        total_record_count += record_count
 
         start_page_no += 1
-        while len(rank) < record_count:
-            download_data(
+        while len(id) < record_count:
+            record_count = download_data(
                 start_page=start_page_no,
                 end_page=start_page_no,
-                include_genre=properties['include_genre'])
+                genre=cur_genre)
             start_page_no += 1
 
+        total_record_count += record_count
         save_games_data(
             filename='dataset/vgsales_' + cur_genre + '.csv',
             separator=properties['separator'],
             enc=properties['encoding'])
+
+    logging.info("Fetched records: {}".format(total_record_count))
