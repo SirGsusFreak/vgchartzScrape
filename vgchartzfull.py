@@ -7,6 +7,7 @@ import numpy as np
 import logging
 import time
 import json
+import os
 
 def create_random_header():
     """
@@ -193,7 +194,7 @@ def download_data(*, start_page, end_page, genre):
             downloaded_games += 1
 
     logging.info("Number of downloaded resources: {}".format(downloaded_games))
-    return record_count
+    return record_count, downloaded_games
 
 def save_games_data(*, filename, separator, enc):
     """
@@ -229,6 +230,29 @@ def save_games_data(*, filename, separator, enc):
               'Release_Date', 'Last_Update' ]]
 
     df.to_csv(filename, sep=separator, encoding=enc, index=False)
+
+def apply_func(row):
+
+    if row['Total_Sales'] is None:
+        row['Total_Sales'] = row['Total_Shipped']
+    return row
+
+
+def merge_csv_files(base_path, separator, enc):
+    output_file = 'vgsales.csv'
+    all_files = [f for f in os.listdir(base_path)
+                 if os.path.isfile(os.path.join(base_path, f)) and f.endswith('.csv') and f != output_file]
+    li = []
+    for filename in all_files:
+        df = pd.read_csv(base_path + '/' + filename, index_col=None, header=0)
+        li.append(df)
+    df = pd.concat(li, axis=0, ignore_index=True)
+
+    df = df.apply(apply_func, axis=1)
+    del df['Total_Shipped']
+
+    df.to_csv(base_path + '/' + output_file, sep=separator, encoding=enc, index=False)
+
 
 if __name__ == "__main__":
 
@@ -276,7 +300,6 @@ if __name__ == "__main__":
     current_page = get_page(url=page_url)
 
     soup = BeautifulSoup(current_page, features="html.parser")
-
     select_tags = soup.find_all("select")
     generes_tag = list(filter(lambda x: x.attrs['name'] == 'genre', select_tags))[0]
     genres_list = [x.attrs['value'].replace(' ', '+') for x in generes_tag.findChildren('option') if x.attrs['value'] != '']
@@ -308,25 +331,27 @@ if __name__ == "__main__":
         end_page_no = 1
 
         # download the first page and get the number of records from it.
-        record_count = download_data(
+        record_count, downloaded = download_data(
             start_page=start_page_no,
             end_page=start_page_no,
             genre=cur_genre)
 
-        total_record_count += record_count
+        total_record_count += downloaded
 
         start_page_no += 1
         while len(id) < record_count:
-            record_count = download_data(
+            record_count, downloaded = download_data(
                 start_page=start_page_no,
                 end_page=start_page_no,
                 genre=cur_genre)
             start_page_no += 1
+            total_record_count += downloaded
 
-        total_record_count += record_count
         save_games_data(
             filename='dataset/vgsales_' + cur_genre + '.csv',
-            separator=properties['separator'],
-            enc=properties['encoding'])
+            separator=properties['separator'], enc=properties['encoding'])
+
+    merge_csv_files('dataset', separator=properties['separator'], enc=properties['encoding'])
 
     logging.info("Fetched records: {}".format(total_record_count))
+

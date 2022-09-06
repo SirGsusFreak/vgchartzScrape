@@ -51,13 +51,13 @@ The dataset it's composed by this fields, and the data is collected with this [m
 ## TODO
 
 - [x] Fetch Each Genre Separately
-- [x] Scrap the Genere names from the page, instead of specify them hardcode on an arrary. 
+- [x] Scrap the Genre names from the page, instead of specify them hardcode on an arrary. 
 - [x] Replace the Rank Column with the Unique Id of vgsales site.
 - [x] Add Genre Column 
-- [ ] Data Cleanse:
-  - [ ] Merge all files
-  - [ ] Merge the Total_Shipped and Total_Sales columns as it seems they completes 
-- [ ] Add Juppter notebook for Pivots, and statistics, and Trends. 
+- [x] Data Cleanse:
+  - [x] Merge all files
+  - [x] Merge the Total_Shipped and Total_Sales columns as it seems they completes 
+- [ ] Add Jupyter notebook for Pivots, and statistics, and Trends. 
 - [ ] publish output to Github web site. 
 - [ ] Add some unit testing, based on Github testing, to create a daily built of the site. 
 

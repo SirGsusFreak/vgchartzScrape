@@ -6,7 +6,7 @@
   "start_page": 1,
   "base_page_url": "https://www.vgchartz.com/gamedb/?page=",
   "query_parameters": {
-    "results": 2000,
+    "results": 3000,
     "region": "All",
     "boxart": "Both",
     "banner": "Both",
