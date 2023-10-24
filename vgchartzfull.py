@@ -9,6 +9,7 @@ import time
 import json
 import os
 
+
 def create_random_header():
     """
     Create a random user agent in order to better mimic user behaviour.
@@ -29,17 +30,19 @@ def create_random_header():
     header = {'User-Agent': user_agent}
     return header
 
+
 def generate_remaining_url(*, query_parameters):
     """
     Generate an url with a list of videogames from the query params configured at resources.json
     :return: Url with page number
     """
-    reply=''
+    reply = ''
     for param in query_parameters:
-        value=query_parameters.get(param, None)
+        value = query_parameters.get(param, None)
         reply += f"&{param}={value}" if value is not None else f"&{param}="
     logging.debug(f"Url Generated: {base_url}N{reply}")
     return reply
+
 
 def get_page(*, url):
     """
@@ -56,6 +59,7 @@ def get_page(*, url):
     time.sleep(randint(properties['minimum_sleep_time'], properties['maximum_sleep_time']))
     return result
 
+
 def parse_number(*, number_string):
     """
     Return string parsed to float with custom format for millions (m)
@@ -66,9 +70,10 @@ def parse_number(*, number_string):
         reply = number_string.strip('m')
         reply = str(float(reply) * 1000000)
     else:
-        reply=number_string
+        reply = number_string
 
     return float(reply) if not reply.startswith("N/A") else np.nan
+
 
 def parse_date(*, date_string):
     """
@@ -79,10 +84,11 @@ def parse_date(*, date_string):
     if date_string.startswith('N/A'):
         date_formatted = 'N/A'
     else:
-        #i.e. date_string = '18th Feb 20'
+        # i.e. date_string = '18th Feb 20'
         date_formatted = pd.to_datetime(date_string)
 
     return date_formatted
+
 
 def add_current_game_data(*,
                           current_id,
@@ -122,6 +128,7 @@ def add_current_game_data(*,
     sales_ot.append(current_sales_ot)
     release_date.append(current_release_date)
     last_update.append(current_last_update)
+
 
 def download_data(*, start_page, end_page, genre):
     """
@@ -173,7 +180,7 @@ def download_data(*, start_page, end_page, genre):
             current_game_genre = genre
 
             add_current_game_data(
-                current_id = current_id,
+                current_id=current_id,
                 current_game_name=current_game_name,
                 current_game_genre=current_game_genre,
                 current_platform=current_platform,
@@ -195,6 +202,7 @@ def download_data(*, start_page, end_page, genre):
 
     logging.info("Number of downloaded resources: {}".format(downloaded_games))
     return record_count, downloaded_games
+
 
 def save_games_data(*, filename, separator, enc):
     """
@@ -224,15 +232,15 @@ def save_games_data(*, filename, separator, enc):
     }
 
     df = pd.DataFrame(columns)
-    df = df[[ 'Id', 'Name', 'Genre', 'Platform', 'Publisher', 'Developer',
-              'Vgchartz_Score', 'Critic_Score', 'User_Score', 'Total_Shipped',
-              'Total_Sales', 'NA_Sales', 'PAL_Sales', 'JP_Sales', 'Other_Sales',
-              'Release_Date', 'Last_Update' ]]
+    df = df[['Id', 'Name', 'Genre', 'Platform', 'Publisher', 'Developer',
+             'Vgchartz_Score', 'Critic_Score', 'User_Score', 'Total_Shipped',
+             'Total_Sales', 'NA_Sales', 'PAL_Sales', 'JP_Sales', 'Other_Sales',
+             'Release_Date', 'Last_Update']]
 
     df.to_csv(filename, sep=separator, encoding=enc, index=False)
 
-def apply_func(row):
 
+def apply_func(row):
     if row['Total_Sales'] is None:
         row['Total_Sales'] = row['Total_Shipped']
     return row
@@ -249,7 +257,7 @@ def merge_csv_files(base_path, separator, enc):
     df = pd.concat(li, axis=0, ignore_index=True)
 
     df = df.apply(apply_func, axis=1)
-    del df['Total_Shipped']
+    # del df['Total_Shipped']
 
     df.to_csv(base_path + '/' + output_file, sep=separator, encoding=enc, index=False)
 
@@ -302,7 +310,8 @@ if __name__ == "__main__":
     soup = BeautifulSoup(current_page, features="html.parser")
     select_tags = soup.find_all("select")
     generes_tag = list(filter(lambda x: x.attrs['name'] == 'genre', select_tags))[0]
-    genres_list = [x.attrs['value'].replace(' ', '+') for x in generes_tag.findChildren('option') if x.attrs['value'] != '']
+    genres_list = [x.attrs['value'].replace(' ', '+') for x in generes_tag.findChildren('option') if
+                   x.attrs['value'] != '']
     logging.info("Geners Found: {}".format(genres_list))
 
     # get the first page, and find number of result for the specific Genre.
@@ -354,4 +363,3 @@ if __name__ == "__main__":
     merge_csv_files('dataset', separator=properties['separator'], enc=properties['encoding'])
 
     logging.info("Fetched records: {}".format(total_record_count))
-
